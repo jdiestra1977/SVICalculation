@@ -5,6 +5,32 @@
 #calculate the SVI (ADPTVCAPACITY)
 #Note: not all variables are being used for the index, but may be useful to know
 
+#This function gets data to calculate SVI in the whole US at the corresponding 
+#"geo" (cbs, zcta, county)
+getVariablesAllUS<-function(geo,year){
+  varsNew<-c("B01003_001E","C17002_002E","C17002_003E","C17002_001E","B23025_005E","B23025_003E","B19301_001E",
+             "B15003_016E","B15003_017E","B15003_018E","B15003_019E","B15003_020E","B15003_021E","B15003_022E",
+             "B15003_023E","B15003_024E","B15003_025E","B15003_001E","B99163_005E","B99163_001E","B09021_022E",
+             "B09021_001E","B01001_003E","B01001_004E","B01001_005E","B01001_006E","B01001_027E","B01001_028E",
+             "B01001_029E","B01001_030E","B18101_026E","B18101_007E","C18130_010E","C18130_017E","B18101_025E",
+             "B18101_006E","C18130_009E","C18130_016E","B23008_008E","B23008_021E","B23008_002E","B23008_015E",
+             "B25024_007E","B25024_008E","B25024_009E","B25024_001E","B25033_006E","B25033_007E","B25033_012E",
+             "B25033_013E","B25033_001E","B25014_005E","B25014_006E","B25014_007E","B25014_011E","B25014_012E",
+             "B25014_013E","B25014_001E","B25044_003E","B25044_010E","B25044_001E","B26001_001E","B03002_003E",
+             "B03002_001E","B02001_004E","B02001_001E","B02001_005E","B02001_003E","B03003_003E","B03003_001E",
+             "B02001_006E","B02001_007E","B02001_008E","B03002_003E","B03002_001E")
+  #Gets socioeconomic variables from ACS (varsNew) for all zip codes in the USA
+  dataVars <- get_acs(
+    geography = geo,
+    variables = varsNew,
+    year = year,
+    output = 'wide'
+  )
+  return(dataVars)
+}
+
+#Funtion to extrac variables for SVI in each "state" ("TX", "NM", etc) to a 
+#given "geo" level (cbs, zcta, county)
 getVariables<-function(geo,state,year){
   varsNew<-c("B01003_001E","C17002_002E","C17002_003E","C17002_001E","B23025_005E","B23025_003E","B19301_001E",
              "B15003_016E","B15003_017E","B15003_018E","B15003_019E","B15003_020E","B15003_021E","B15003_022E",
@@ -191,8 +217,6 @@ rankingAndSvi<-function(x){
   tablasJuntas2019$ADPTVCAPACITY <- dplyr::percent_rank(tablasJuntas2019$SUMRANK)
   tablasJuntas2019$SVI=1-tablasJuntas2019$ADPTVCAPACITY
   
-  tablasJuntas2019<-tablasJuntas2019 %>% drop_na()
-#  tablasJuntas2019 %>% select(GEOID,SVI,ADPTVCAPACITY)
   sviAllUSA2019<-tablasJuntas2019 %>% select(Zip=GEOID,SVI)
   return(sviAllUSA2019)
 }
