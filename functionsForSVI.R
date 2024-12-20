@@ -1,9 +1,63 @@
+
+# load_variables(2020, "acs5", cache = TRUE) %>%
+#   filter(str_detect(name,"B25091")) %>% print(n=100)
+# 
+# rent_income <- get_acs(
+#   geography = "zcta",
+#   table = "B25074",
+#   year = 2020,
+#   survey = "acs5",
+#   output = "wide",
+#   geometry = FALSE
+# )
+# 
+# # Wrangling B25074: Renters
+# renters <- rent_income %>%
+#   select(GEOID, ends_with("E")) %>%
+#   pivot_longer(
+#     cols = starts_with("B25074"),
+#     names_to = "variable",
+#     values_to = "estimate"
+#   ) %>% mutate(variable=variable %>% str_remove_all("E")) %>%
+#   mutate(
+#     income_category = case_when(
+#       variable %in% c("B25074_003", "B25074_004", "B25074_005") ~ "<$10k",
+#       variable %in% c("B25074_006", "B25074_007", "B25074_008") ~ "$10k-$19k",
+#       variable %in% c("B25074_009", "B25074_010", "B25074_011") ~ "$20k-$34k",
+#       variable %in% c("B25074_012", "B25074_013", "B25074_014") ~ "$35k-$49k",
+#       variable %in% c("B25074_015", "B25074_016", "B25074_017") ~ "$50k-$74k",
+#       TRUE ~ "Other"
+#     ),
+#     rent_burden = case_when(
+#       variable %in% c("B25074_005", "B25074_008", "B25074_011", "B25074_014", "B25074_017") ~ "30%-35%",
+#       variable %in% c("B25074_018", "B25074_019") ~ "35%-40%",
+#       variable %in% c("B25074_020") ~ "40%-50%",
+#       variable %in% c("B25074_021") ~ "50%+",
+#       TRUE ~ "Not computed"
+#     )
+#   ) %>%
+#   filter(
+#     income_category %in% c("<$10k", "$10k-$19k", "$20k-$34k", "$35k-$49k", "$50k-$74k"),
+#     rent_burden %in% c("30%-35%", "35%-40%", "40%-50%", "50%+")
+#   ) %>%
+#   group_by(GEOID) %>%
+#   summarize(
+#     cost_burdened_renters = sum(estimate, na.rm = TRUE)
+#   )
+
+
 #This code is an adaptation of the original code that can be found here:
 # https://github.com/azh2/Social-Vulnerability-R
 
 #These are the variables that will be extracted from the American Community Survey (ACS) to
 #calculate the SVI (ADPTVCAPACITY)
 #Note: not all variables are being used for the index, but may be useful to know
+
+#I am adding variables to calculate measures included in SVI of CDC:
+#Percent of population without insurance:
+#"B27010_017E", # Total population without health insurance (males)
+#"B27010_033E", # Total population without health insurance (females)
+#"B27010_001E"  # Total population (both sexes)
 
 #This function gets data to calculate SVI in the whole US at the corresponding 
 #"geo" (cbs, zcta, county)
@@ -18,7 +72,9 @@ getVariablesAllUS<-function(geo,year){
              "B25033_013E","B25033_001E","B25014_005E","B25014_006E","B25014_007E","B25014_011E","B25014_012E",
              "B25014_013E","B25014_001E","B25044_003E","B25044_010E","B25044_001E","B26001_001E","B03002_003E",
              "B03002_001E","B02001_004E","B02001_001E","B02001_005E","B02001_003E","B03003_003E","B03003_001E",
-             "B02001_006E","B02001_007E","B02001_008E","B03002_003E","B03002_001E")
+             "B02001_006E","B02001_007E","B02001_008E","B03002_003E","B03002_001E",
+             "B27010_017E","B27010_033E","B27010_001E" #For population without insurance
+             ) 
   #Gets socioeconomic variables from ACS (varsNew) for all zip codes in the USA
   dataVars <- get_acs(
     geography = geo,
@@ -42,7 +98,9 @@ getVariables<-function(geo,state,year){
              "B25033_013E","B25033_001E","B25014_005E","B25014_006E","B25014_007E","B25014_011E","B25014_012E",
              "B25014_013E","B25014_001E","B25044_003E","B25044_010E","B25044_001E","B26001_001E","B03002_003E",
              "B03002_001E","B02001_004E","B02001_001E","B02001_005E","B02001_003E","B03003_003E","B03003_001E",
-             "B02001_006E","B02001_007E","B02001_008E","B03002_003E","B03002_001E")
+             "B02001_006E","B02001_007E","B02001_008E","B03002_003E","B03002_001E",
+             "B27010_017E","B27010_033E","B27010_001E" #For population without insurance
+  )
   #Gets socioeconomic variables from ACS (varsNew) for all zip codes in the USA
   dataVars <- get_acs(
     geography = geo,
@@ -71,6 +129,12 @@ rankingAndSvi<-function(x){
   tablasJuntas2019 <- tablasJuntas2019 %>% mutate(UNEMP =B23025_005E/B23025_003E) #PER_UNEMPLOYED 
   #B19301_001 - Estimate!!Per capita income in the past 12 months (in 2018 inflation-adjusted dollars)
   tablasJuntas2019<- tablasJuntas2019 %>% mutate(PCI=B19301_001E) #PER_CAPITA_INCOME
+  
+  #Percent of the population without health insurance
+  #"B27010_017E", # Total population without health insurance (males)
+  #"B27010_033E", # Total population without health insurance (females)
+  #"B27010_001E"  # Total population (both sexes)
+  tablasJuntas2019 <- tablasJuntas2019 %>% mutate(UNINSU=(B27010_017E+B27010_033E)/B27010_001E)
   
   ######LANGUAGE AND EDUCATION:#####
   #Percent of Population 25+ with Less than a 12th Grade Education
@@ -179,18 +243,6 @@ rankingAndSvi<-function(x){
   # B03002_003 - Estimate!!Total!!Not Hispanic or Latino!!White alone
   tablasJuntas2019 <- tablasJuntas2019 %>% mutate(WHITE=B03002_003E/B03002_001E)
   
-  #####OPTIONAL VARIABLES:####
-  
-  #JndTbls$HOMESOCCPD <- 1-JndTbls$B25002_003E/JndTbls$B25002_001E
-  #JndTbls$RENTER <- JndTbls$B25003_003E/JndTbls$B25003_001E
-  #JndTbls$RENTBURDEN <- (JndTbls$B25070_007E+JndTbls$B25070_008E+JndTbls$B25070_009E+JndTbls$B25070_010E)/JndTbls$B25070_001E
-  #JndTbls$RENTASPERINCOME <- (JndTbls$B25071_001E/100)
-  #JndTbls$OVR65ALONE <- JndTbls$B11007_003E/JndTbls$B11007_001E
-  #JndTbls$BLTBFR1969 <- (JndTbls$B25034_008E+JndTbls$B25034_009E+JndTbls$B25034_010E+JndTbls$B25034_011E)/JndTbls$B25034_001E
-  #JndTbls$SVRPOV <- JndTbls$C17002_002E/JndTbls$C17002_001E
-  #JndTbls$MODPOV <- JndTbls$C17002_004E/JndTbls$C17002_001E
-  #JndTbls$SINGLMTHRPVRTY <-(JndTbls$B17023_016E+JndTbls$B17023_017E+JndTbls$B17023_018E)/JndTbls$B17023_001E
-  
   #####RANKING#####
   
   #These functions rank each of the variables, variables with matching values across ranks are given the max score, 
@@ -198,7 +250,8 @@ rankingAndSvi<-function(x){
   
   a <- tablasJuntas2019$RNKPOV <- rank(x = -tablasJuntas2019$POV, na.last = "keep", ties.method = "max")
   b <- tablasJuntas2019$RNKUNEMP <- rank(x = -tablasJuntas2019$UNEMP, na.last = "keep", ties.method = "max")
-  c <- tablasJuntas2019$RNKPCI <- rank(x = tablasJuntas2019$PCI, na.last = "keep", ties.method = "max") #Note that we are not taking the inverse here because the higher the Per Capita Income, the greater the Adaptive Capacity of a given blockgroup
+#Note that we are not taking the inverse here because the higher the Per Capita Income, the greater the Adaptive Capacity of a given blockgroup
+  c <- tablasJuntas2019$RNKPCI <- rank(x = tablasJuntas2019$PCI, na.last = "keep", ties.method = "max") 
   d <- tablasJuntas2019$RNKNOHSDP <- rank(x = -tablasJuntas2019$NOHSDP, na.last = "keep", ties.method = "max")
   e <- tablasJuntas2019$RNKLIMENG <- rank(x = -tablasJuntas2019$LIMENG, na.last = "keep", ties.method = "max")
   f <- tablasJuntas2019$RNKAGE65 <- rank(x = -tablasJuntas2019$AGE65, na.last = "keep", ties.method = "max")
@@ -210,9 +263,10 @@ rankingAndSvi<-function(x){
   l <- tablasJuntas2019$RNKCROWD <- rank(x = -tablasJuntas2019$CROWD, na.last = "keep", ties.method = "max")
   m <- tablasJuntas2019$RNKNOVEH <- rank(x = -tablasJuntas2019$NOVEH, na.last = "keep", ties.method = "max")
   n <- tablasJuntas2019$RNKGROUPQ <- rank(x = -tablasJuntas2019$GROUPQ, na.last = "keep", ties.method = "max")
+  p <- tablasJuntas2019$UNINSU <- rank(x = -tablasJuntas2019$UNINSU, na.last = "keep", ties.method = "max")
   
   #Sum The Ranks
-  tablasJuntas2019$SUMRANK <- a+b+c+d+e+f+g+h+i+j+k+l+m+n
+  tablasJuntas2019$SUMRANK <- a+b+c+d+e+f+g+h+i+j+k+l+m+n+p
   #Derive the Adaptive Capacity Index
   tablasJuntas2019$ADPTVCAPACITY <- dplyr::percent_rank(tablasJuntas2019$SUMRANK)
   tablasJuntas2019$SVI=1-tablasJuntas2019$ADPTVCAPACITY

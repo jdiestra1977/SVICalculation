@@ -32,10 +32,12 @@ socioEcoVars<-getVariables(geo,state,year)
 #with respect all zcta's in the state
 sviTexas<-rankingAndSvi(socioEcoVars)
 
+save(sviTexas,file="~/Documents/GitHub/Mpox_2024/Data/sviTexas.RData")
+
 #3- getVariablesAllUS(). This function calculates SVI over all US at the 
 #For all US, at the zcta level, we can extract data in the period [2015,2022]
 geo="county"
-year=2020
+year=2022
 allUS<-getVariablesAllUS(geo,year)
 #SVI of all counties in the USA
 sviAllUS<-rankingAndSvi(allUS)
@@ -48,12 +50,21 @@ bothSVIs<-svi_cdc %>% select(FIPS,RPL_THEMES) %>%
 
 #Correlation between SVI calculated here and CDC.
 bothSVIs %>%
-  ggplot(aes(x=RPL_THEMES,y=SVI)) +
-  geom_point() + geom_abline(slope=1,intercept = 0)
+  ggplot(aes(y=RPL_THEMES,x=SVI)) + theme_bw() +
+  geom_point(size=2) + geom_abline(slope=1,intercept = 0) +
+  theme(text=element_text(size=17))
 
 #Some statistics to evaluate similarity.
 cor(bothSVIs$RPL_THEMES,bothSVIs$SVI)
 summary(lm(SVI~RPL_THEMES,data=bothSVIs))
 
+# SVI SCTA in the US
+
+geo="zcta"
+year=2020
+allUS<-getVariablesAllUS(geo,year)
+#SVI of all counties in the USA
+sviAllUS_ZCTA<-rankingAndSvi(allUS)
+save(sviAllUS_ZCTA,file="~/Documents/GitHub/Mpox_2024/Data/sviAll_US.RData")
 
 
