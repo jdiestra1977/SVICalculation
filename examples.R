@@ -23,6 +23,11 @@ year=2019
 #for the year 2018
 socioEcoVars<-getVariables(geo,state,year)
 
+socioEcoVars_cbgs<-getVariables("cbg",state,2022)
+
+socioEcoVars_cbgs_only_Dallas<- socioEcoVars_cbgs %>% 
+  filter(substr(GEOID, 1, 5) == "48113")
+
 # Once this data frame is generated, it would be used in the main function
 # to calculate SVI rankingSVI()
 # 2- rankingSVI(), takes a data frame as argument with the variables needed to
@@ -30,9 +35,88 @@ socioEcoVars<-getVariables(geo,state,year)
 
 #The data frame created by this function has the SVI of each zcta, calculated
 #with respect all zcta's in the state
-sviTexas<-rankingAndSvi(socioEcoVars)
+#sviTexas<-rankingAndSvi(socioEcoVars)
 
-save(sviTexas,file="~/Documents/GitHub/Mpox_2024/Data/sviTexas.RData")
+sviTexas_cbgs<-rankingAndSvi(socioEcoVars_cbgs)
+
+dallas_svi_texas <- sviTexas_cbgs %>%
+  filter(substr(Zip, 1, 5) == "48113") %>% drop_na()
+dallas_svi_local<-rankingAndSvi(socioEcoVars_cbgs_only_Dallas)
+
+dallas_svi_texas %>%
+  ggplot(aes(x=SVI)) + geom_density()
+
+dallas_svi_local %>%
+  ggplot(aes(x=SVI)) + geom_density()
+
+dallas_county_svi_cbgs<-dallas_svi_texas %>% rename("SVI_Texas"="SVI") %>%
+  left_join(dallas_svi_local %>% rename("SVI_local"="SVI")) %>% rename("cbg"="Zip")
+
+write_csv(dallas_county_svi_cbgs,file="dallas_county_svi_cbgs.csv")
+
+dallas_county_svi_cbgs %>%
+  ggplot(aes(x=SVI_Texas,y=SVI_local)) +
+  geom_point() + geom_abline(slope = 1,intercept = 0)
+
+
+#library(tidycensus)
+library(dplyr)
+library(sf)
+
+# Example: 2022 ACS 5-year, block groups, Dallas County — includes geometry
+bg_geo <- get_acs(
+  geography = "block group",
+  variables = "B01003_001",  # total population (any variable works)
+  state = "TX",
+  county = "Dallas",
+  year = 2022,
+  survey = "acs5",
+  geometry = TRUE,
+  output = "wide"
+) %>%
+  st_transform(4326) %>%
+  select(GEOID, geometry) %>%
+  rename(cbg = GEOID)
+
+cbg_joined <- bg_geo %>% left_join(dallas_county_svi_cbgs, by = "cbg")
+
+write_csv(cbg_joined,file="dallas_county_svi_cbgs.csv")
+
+cbg_joined %>%
+  ggplot(aes(fill=SVI_local)) + geom_sf()
+
+cbg_joined %>% pivot_longer(cols = contains("SVI")) %>%
+  ggplot(aes(fill=value)) + theme_void() +
+  geom_sf() + facet_wrap(~name) + 
+  scale_fill_viridis_c(
+    option = "magma",     # or "plasma", "inferno", "viridis"
+    direction = -1,       # -1 reverses (so dark = high vulnerability)
+    limits = c(0, 1),
+    na.value = "grey90",
+    name = "SVI"
+  )
+
+cbg_joined %>% pivot_longer(cols = contains("SVI")) %>%
+  ggplot(aes(fill=value)) + theme_void() +
+  geom_sf() + facet_wrap(~name) + 
+  scale_fill_gradient(
+    low = "#a1d99b",  # pale pink
+    high = "#a50f15", # dark red
+    limits = c(0, 1),
+    na.value = "grey90",
+    name = "SVI"
+  ) + theme(legend.position = "top",text=element_text(size=15))+
+  guides(
+    fill = guide_colorbar(
+      barwidth = 20,   # <-- length of the bar (increase this)
+      barheight = 1,   # <-- thickness of the bar
+      title.position = "top",
+      title.hjust = 0.5
+    ))
+
+ggsave(last_plot(),file="Dallas_svi_both.png")
+
+#save(sviTexas,file="~/Documents/GitHub/Mpox_2024/Data/sviTexas.RData")
 
 #3- getVariablesAllUS(). This function calculates SVI over all US at the 
 #For all US, at the zcta level, we can extract data in the period [2015,2022]
