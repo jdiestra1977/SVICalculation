@@ -83,7 +83,7 @@ cbg_joined <- bg_geo %>% left_join(dallas_county_svi_cbgs, by = "cbg")
 write_csv(cbg_joined,file="dallas_county_svi_cbgs.csv")
 
 cbg_joined %>%
-  ggplot(aes(fill=SVI_local)) + geom_sf()
+  ggplot(aes(fill=SVI_local)) + geom_sf() + theme_void()
 
 cbg_joined %>% pivot_longer(cols = contains("SVI")) %>%
   ggplot(aes(fill=value)) + theme_void() +
@@ -135,7 +135,7 @@ bothSVIs<-svi_cdc %>% select(FIPS,RPL_THEMES) %>%
 #Correlation between SVI calculated here and CDC.
 bothSVIs %>%
   ggplot(aes(y=RPL_THEMES,x=SVI)) + theme_bw() +
-  geom_point(size=2) + geom_abline(slope=1,intercept = 0) +
+  geom_point(size=2) + geom_abline(slope=1,intercept = 0,color="red") +
   theme(text=element_text(size=17))
 
 #Some statistics to evaluate similarity.

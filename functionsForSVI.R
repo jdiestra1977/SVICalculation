@@ -60,7 +60,7 @@ vars_bg_safe <- c(
 )
 
 # --------------------------
-# Get vars for ALL US (ZCTA/County/Tract ok; block group not supported nationwide in one call)
+# Get vars for ALL US (ZCTA/County/Tract or; block group not supported nationwide in one call)
 # --------------------------
 getVariablesAllUS <- function(geo, year, strict_bg = TRUE) {
   geo_tidy <- dplyr::case_when(
