@@ -151,4 +151,49 @@ allUS<-getVariablesAllUS(geo,year)
 sviAllUS_ZCTA<-rankingAndSvi(allUS)
 save(sviAllUS_ZCTA,file="~/Documents/GitHub/Mpox_2024/Data/sviAll_US.RData")
 
+#State level SVI (Shraddha)
+geo="state"
+year=2025
+allUS<-getVariablesAllUS(geo,year)
+#SVI of all counties in the USA
+sviAllUS<-rankingAndSvi(allUS)
+
+svi_state_time<-NULL
+for (y in 2015:2024) {
+  geo="state"
+  #year=2025
+  allUS<-getVariablesAllUS(geo,y)
+  #SVI of all counties in the USA
+  sviAllUS<-rankingAndSvi(allUS) %>%
+    mutate(year=y)
+  svi_state_time<-rbind(svi_state_time,sviAllUS)
+}
+
+svi_state_time<-svi_state_time %>%
+  left_join(allUS %>% select(Zip=GEOID,State=NAME)) %>%
+  rename("GEOID"="Zip")
+
+svi_state_time %>% mutate(year=as.integer(year)) %>%
+  ggplot(aes(x=as.factor(year),y=SVI,group = GEOID,color=GEOID)) +
+  geom_line()
+
+svi_state_time %>% 
+  ggplot(aes(x=State,y=SVI)) +
+  geom_boxplot() + xlab("") +
+  theme(axis.text.x = element_text(angle = 45,hjust=1))
+
+write_csv(svi_state_time,file="svi_state_time.csv")
+
+svi_state_time %>% 
+  filter(year %in% c(2015,2024)) %>%
+  select(-GEOID) %>% 
+  pivot_wider(names_from = "year", values_from = "SVI") %>%
+  mutate(diff_total = `2024` - `2015`) %>%
+  filter(!State %in% c("Alaska","Puerto Rico","Hawaii")) %>%
+  ggplot(aes(x = reorder(State, diff_total), y = diff_total)) + theme_bw() +
+  geom_col() + xlab("") + ylab("Difference in SVI (2024 - 2015)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave(last_plot(),file="change_in_SVI_states.png")
+
 
