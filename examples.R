@@ -128,6 +128,19 @@ sviAllUS<-rankingAndSvi(allUS)
 
 #SVI calculated by the CDC 
 svi_cdc <- read_csv("SVI_2020_US_county_CDC.csv")
+svi_cdc_texas<-read_csv("SVI_Texas_county.csv")
+
+svi_texas_both <- svi_cdc %>% select(FIPS,svi_US=RPL_THEMES) %>%
+  left_join(svi_cdc_texas %>% select(FIPS,svi_TX=RPL_THEMES) %>%
+              mutate(FIPS=as.character(FIPS))) %>% drop_na() 
+
+write_csv(svi_texas_both,file="svi_texas_both.csv")
+
+svi_texas_both %>%
+  ggplot(aes(x = svi_US, y = svi_TX)) + geom_point() +
+  geom_abline(slope = 1,intercept = 0)
+
+ggsave(last_plot(),file="svi_texas_both.png")
 
 bothSVIs<-svi_cdc %>% select(FIPS,RPL_THEMES) %>%
   left_join(sviAllUS %>% select(FIPS=Zip,SVI))  %>% drop_na()
